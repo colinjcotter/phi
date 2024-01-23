@@ -95,19 +95,19 @@ class phi(object):
         assert c.shape == (self.d_c,)
         self.c_gather = c
     
-    def gather(self, f_in, f_out):
+    def gather(self, f_in):
         """
         given f_in from VFS, 
         construct f_out = sum_i c_i f_in[i]
         where c_i are coefficients in self.c_gather
         """
-        assert self.c_gather, "c_gather is not set."
+        assert self.c_gather.all(), "c_gather is not set."
         f_out = Function(self.V)
-        f_ins = f_in.subfunctions
-        for i in range(d_c):
-            f_out += self.c_gather*f_ins[i]
+        for i in range(self.d_c):
+            f_out.assign(f_out
+                         + Constant(self.c_gather[i])*f_in.sub(i))
         return f_out
-        
+
     def scatter(self, f_in):
         """
         Scatter f_in out to a channel of width d_c
