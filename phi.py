@@ -37,15 +37,17 @@ class phi(object):
     def set_basis(self, basis):
         self.basis = basis
     
-    def set_weights(self, T, b, e):
+    def set_weights(self, T, b, e, c_gather):
         assert self.basis, "basis is not set."
         assert T.shape == (self.layers, self.d_c. self.d_c)
         assert b.shape == (self.layers, self.d_c)
         assert e.shape == (self.layers, self.d_c, len(self.basis))
+        assert c_gather.shape == (self.layers,)
         self.T = T
         self.b = b
         self.e = e
-    
+        self.c_gather = c_gather
+
     def non_local_layer(f_in, l):
         """
         Apply one nonlocal layer to f_in [from Vv]
