@@ -34,6 +34,9 @@ class phi(object):
         f_out = self.gather(f_layer)
         return f_out
 
+    def set_basis(self, basis):
+        self.basis = basis
+    
     def set_weights(self, T, b, e):
         assert self.basis, "basis is not set."
         assert T.shape == (self.layers, self.d_c. self.d_c)
