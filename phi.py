@@ -77,8 +77,10 @@ class phi(object):
         return f_out
 
     def sigma(self, f):
-        return tanh(Constant(self.scale)*f)  # returns an expression
-    
+        #  here we use the softplus
+        x = Constant(self.scale)*f
+        return log(1 + exp(x))  # returns an expression
+
     def set_c_gather(c):
         assert c.shape == (self.d_c,)
         self.c_gather = c
