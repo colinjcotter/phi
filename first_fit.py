@@ -27,21 +27,23 @@ b = np.random.randn(myphi.layers, myphi.d_c)
 e = np.random.randn(myphi.layers, myphi.d_c, len(myphi.basis))
 myphi.set_weights(T, b, e)
 
+T.tofile("T.dat", sep=" ")
+b.tofile("b.dat", sep=" ")
+e.tofile("e.dat", sep=" ")
+
 # assembling the a matrix from data
 
 A = np.zeros((myphi.d_c, myphi.d_c))
-b = np.zeros((myphi.d_c,))
+rhs = np.zeros((myphi.d_c,))
 nsamples = 20
 with CheckpointFile("first.h5", 'r') as afile:
     for i in range(20):
         print(i)
         f_in = afile.load_function(mesh, "input", idx=i)
         f_out = afile.load_function(mesh, "output", idx=i)
-        myphi.increment_ls_system(A, b, (f_in, f_out))
+        myphi.increment_ls_system(A, rhs, (f_in, f_out))
 
 gamma = 1.0e-2
 
-x = np.linalg.solve(A + gamma/nsamples*np.eye(myphi.d_c),
-                    b) 
-
-
+A.tofile("A.dat", sep=" ")
+rhs.tofile("rhs.dat", sep=" ")
