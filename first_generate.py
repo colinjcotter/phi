@@ -1,7 +1,7 @@
 # generate data for an initial testing of the training
 from firedrake import *
 
-ncells = 1000
+ncells = 100
 mesh = PeriodicUnitIntervalMesh(ncells, name="mesh0")
 Vic = FunctionSpace(mesh, "DG", 0)
 V = FunctionSpace(mesh, "CG", 1)
@@ -15,7 +15,7 @@ unp1 = Function(V)
 dt = 1.0e-2
 Dt = Constant(dt)
 tmax = 1.0
-kappa = Constant(1.0e-4)
+kappa = Constant(1.0e-3)
 
 eqn = ((unp1 - un)*v + Dt*v*unp1*unp1.dx(0) +
        kappa*Dt*unp1.dx(0)*v.dx(0))*dx
@@ -25,7 +25,7 @@ tsolver = NonlinearVariationalSolver(prob,
                                          'ksp_type':'preonly',
                                          'pc_type':'lu'})
 
-nsamples = 10
+nsamples = 1000
 vtk = False
 
 if vtk:

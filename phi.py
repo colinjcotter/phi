@@ -113,7 +113,7 @@ class phi(object):
             # sigma
             self.sigma(f_out)
         # protect against memory blowouts
-        PETSc.garbage_cleanup(PETSc.COMM_SELF)
+        # PETSc.garbage_cleanup(PETSc.COMM_SELF)
         return f_out
 
     def sigma(self, f):
