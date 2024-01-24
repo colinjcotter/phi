@@ -15,7 +15,7 @@ unp1 = Function(V)
 dt = 1.0e-2
 Dt = Constant(dt)
 tmax = 1.0
-kappa = Constant(1.0e-3)
+kappa = Constant(1.0e-4)
 
 eqn = ((unp1 - un)*v + Dt*v*unp1*unp1.dx(0) +
        kappa*Dt*unp1.dx(0)*v.dx(0))*dx
@@ -25,7 +25,7 @@ tsolver = NonlinearVariationalSolver(prob,
                                          'ksp_type':'preonly',
                                          'pc_type':'lu'})
 
-nsamples = 10
+nsamples = 1000
 vtk = True
 
 if vtk:
