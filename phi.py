@@ -24,6 +24,7 @@ class phi(object):
         self.b = None
         self.e = None
         self.scale = 1.0
+        self.f_tmp = Function(self.V)
         self.f_layer = Function(self.Vv)
         self.f_layer1 = Function(self.Vv)
 
@@ -45,9 +46,10 @@ class phi(object):
         Apply full map to f_in, placing result in f_out
         """
         f_layer = self.f_layer
-        self.run(f_in)
-        self.gather(f_layer, f_out)
-        return f_out
+        self.f_tmp.assign(f_in)
+        self.run(self.f_tmp)
+        self.gather(f_layer, self.f_tmp)
+        f_out.assign(f_tmp)
 
     def increment_ls_system(self, mat, rhs, pair):
         """
@@ -61,6 +63,7 @@ class phi(object):
         pair - a size 2 tuple containing input and output functions
         """
 
+        self.f_tmp.assign(pair[0])
         self.run(pair[0])
         f_layer = self.f_layer
         for i in range(self.d_c):
@@ -105,11 +108,12 @@ class phi(object):
                                     Constant(self.T[l, i, j])*f_in.sub(j))
             # nonlocal part
             for k, basis_fn in enumerate(self.basis):
+                self.f_tmp.assign(basis_fn)
                 for j in range(self.d_c):
-                    coeff = assemble(inner(f_in.sub(j), basis_fn)*dx)
+                    coeff = assemble(inner(f_in.sub(j), self.f_tmp)*dx)
                     f_out.sub(i).assign(f_out.sub(i) +
                                         Constant(coeff*
-                                                 self.e[l, j, k])*basis_fn)
+                                                 self.e[l, j, k])*self.f_tmp)
             # sigma
             self.sigma(f_out)
         # protect against memory blowouts

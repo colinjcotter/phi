@@ -35,9 +35,9 @@ e.tofile("e.dat", sep=" ")
 
 A = np.zeros((myphi.d_c, myphi.d_c))
 rhs = np.zeros((myphi.d_c,))
-nsamples = 20
+nsamples = 10
 with CheckpointFile("first.h5", 'r') as afile:
-    for i in range(20):
+    for i in range(nsamples):
         print(i)
         f_in = afile.load_function(mesh, "input", idx=i)
         f_out = afile.load_function(mesh, "output", idx=i)
