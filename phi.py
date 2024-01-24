@@ -1,7 +1,9 @@
 from firedrake import *
 import numpy as np
 from firedrake.petsc import PETSc
-from firedrake.assemble import OneFormAssembler
+from firedrake import op2
+from firedrake.assemble import ZeroFormAssembler
+from firedrake import utils
 
 class phi(object):
     def __init__(self, mesh, V, d_c, layers):
@@ -29,9 +31,16 @@ class phi(object):
         self.f_tmp1 = Function(self.V)
         self.f_layer = Function(self.Vv)
         self.f_layer1 = Function(self.Vv)
-        v = TestFunction(V)
-        self.cof = Cofunction(V.dual())
-        self.cof_assembler = OneFormAssembler(v*self.f_tmp*dx, tensor=self.cof)
+        self.result = op2.Global(
+            1,
+            [0.0],
+            dtype=utils.ScalarType,
+            comm=self.V._comm
+        )
+        print(self.result.__dir__())
+        self.prod_assembler = ZeroFormAssembler(self.f_tmp1*self.f_tmp*dx, tensor=self.result)
+
+    @PETSc.Log.EventDecorator()
     def run(self, f_in):
         """
         Apply the map up to final layer to f_in, 
@@ -45,6 +54,7 @@ class phi(object):
             f_layer.assign(f_layer1)
 
 
+    @PETSc.Log.EventDecorator()
     def apply(self, f_in, f_out):
         """
         Apply full map to f_in, placing result in f_out
@@ -55,6 +65,7 @@ class phi(object):
         self.gather(f_layer, self.f_tmp)
         f_out.assign(f_tmp)
 
+    @PETSc.Log.EventDecorator()
     def increment_ls_system(self, mat, rhs, pair):
         """
         Add entries to an existing least squares matrix
@@ -72,12 +83,14 @@ class phi(object):
         f_layer = self.f_layer
         for i in range(self.d_c):
             self.f_tmp.assign(f_layer.sub(i))
-            self.cof_assembler.assemble()
             for j in range(self.d_c):               
                 self.f_tmp1.assign(f_layer.sub(j))
-                mat[i, j] += assemble(self.cof(self.f_tmp1))
+                # mat[i, j] += assemble(self.f_tmp*self.f_tmp1*dx)
+                self.prod_assembler.assemble()
+                mat[i, j] += self.result.data[0]
             self.f_tmp1.assign(pair[1])
-            rhs[i] += assemble(self.cof(self.f_tmp1))
+            self.prod_assembler.assemble()
+            rhs[i] += self.result.data[0]
 
     def set_basis(self, basis):
         self.basis = basis
@@ -91,6 +104,7 @@ class phi(object):
         self.b = b
         self.e = e
 
+    @PETSc.Log.EventDecorator()
     def nonlocal_layer(self, f_in, f_out, l):
         """
         Apply one nonlocal layer to f_in [from Vv]
@@ -116,20 +130,21 @@ class phi(object):
             # nonlocal part
         for k, basis_fn in enumerate(self.basis):
             self.f_tmp.assign(basis_fn)
-            self.cof_assembler.assemble()
             for i in range(self.d_c):
                 for j in range(self.d_c):
                     self.f_tmp1.assign(f_in.sub(j))
-                    coeff = assemble(self.cof(self.f_tmp1)) #  assemble(inner(self.f_tmp1, self.f_tmp)*dx)
+                    self.prod_assembler.assemble()
+                    coeff = self.result.data
                     f_out.sub(i).assign(f_out.sub(i) +
-                                        Constant(coeff*
-                                                 self.e[l, j, k])*self.f_tmp)
+                                        Constant(coeff[0]*self.e[l, j, k])*
+                                        self.f_tmp)
             # sigma
             self.sigma(f_out)
         # protect against memory blowouts
         # PETSc.garbage_cleanup(PETSc.COMM_SELF)
         return f_out
 
+    @PETSc.Log.EventDecorator()
     def sigma(self, f):
         #  here we use the softplus
         expr = []
@@ -141,7 +156,8 @@ class phi(object):
     def set_c_gather(self, c):
         assert c.shape == (self.d_c,)
         self.c_gather = c
-    
+
+    @PETSc.Log.EventDecorator()
     def gather(self, f_in, f_out):
         """
         given f_in from VFS, 
@@ -154,6 +170,7 @@ class phi(object):
             f_out.assign(f_out
                          + Constant(self.c_gather[i])*f_in.sub(i))
 
+    @PETSc.Log.EventDecorator()
     def scatter(self, f_in, f_out):
         """
         Scatter f_in out to a channel of width d_c
