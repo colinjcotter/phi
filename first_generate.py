@@ -15,17 +15,21 @@ unp1 = Function(V)
 dt = 1.0e-2
 Dt = Constant(dt)
 tmax = 1.0
-kappa = 1.0e-3
+kappa = Constant(1.0e-3)
 
 eqn = ((unp1 - un)*v + Dt*v*unp1*unp1.dx(0) +
-       Dt*unp1.dx(0)*v.dx(0))*dx
+       kappa*Dt*unp1.dx(0)*v.dx(0))*dx
 prob = NonlinearVariationalProblem(eqn, unp1)
 tsolver = NonlinearVariationalSolver(prob,
                                      solver_parameters={
                                          'ksp_type':'preonly',
                                          'pc_type':'lu'})
 
-nsamples = 500
+nsamples = 10
+vtk = True
+
+if vtk:
+    pfile = File('first.pvd')
 
 with CheckpointFile("first.h5", 'w') as afile:
     afile.save_mesh(mesh)
@@ -53,3 +57,5 @@ for i in range(nsamples):
     with CheckpointFile("first.h5", 'a') as afile:
         afile.save_function(u0, idx=i)
         afile.save_function(un, idx=i)
+    if vtk:
+        pfile.write(u0, un)
