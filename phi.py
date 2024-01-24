@@ -146,12 +146,15 @@ class phi(object):
 
     @PETSc.Log.EventDecorator()
     def sigma(self, f):
-        #  here we use the softplus
+          #here we use the softplus
         expr = []
         for i in range(self.d_c):
-            x = Constant(self.scale)*f.sub(i)
+            self.f_tmp.assign(f.sub(i))
+            x = Constant(self.scale)*self.f_tmp
             expr.append(ln(1 + exp(x)))
         f.interpolate(as_vector(expr))
+        #for i, fi in enumerate(f.dat):
+        #    fi.data[:] = np.log(1 + np.exp(fi.data[:]))
 
     def set_c_gather(self, c):
         assert c.shape == (self.d_c,)
@@ -179,5 +182,4 @@ class phi(object):
         f_out.assign(0.)
         f_splat = []
         for i in range(self.d_c):
-            f_splat.append(f_in)
-        f_out.interpolate(as_vector(f_splat))
+            f_out.sub(i).assign(f_in)
