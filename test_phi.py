@@ -32,7 +32,8 @@ c = np.random.randn(myphi.d_c)
 myphi.set_c_gather(c)
 
 f_in = Function(V).interpolate(exp(sin(2*pi*x)) + cos(2*pi*x)**3)
-f_out = myphi.apply(f_in)
+f_out = Function(V)
+myphi.apply(f_in, f_out)
 
 # testing the assembly to see if it executes
 # we'll just feed f_in and f_out back in which is nonsense

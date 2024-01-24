@@ -24,15 +24,29 @@ class phi(object):
         self.b = None
         self.e = None
         self.scale = 1.0
-        
-    def apply(self, f_in):
+        self.f_layer = Function(self.Vv)
+        self.f_layer1 = Function(self.Vv)
+
+    def run(self, f_in):
         """
-        Apply the map to f_in, returning result in f_out
+        Apply the map up to final layer to f_in, 
+        placing result in self.f_layer
         """
-        f_layer = self.scatter(f_in)
+        f_layer = self.f_layer
+        f_layer1 = self.f_layer1
+        self.scatter(f_in, f_layer)
         for layer in range(self.layers):
-            f_layer = self.nonlocal_layer(f_layer, layer)
-        f_out = self.gather(f_layer)
+            self.nonlocal_layer(f_layer, f_layer1, layer)
+            f_layer.assign(f_layer1)
+
+
+    def apply(self, f_in, f_out):
+        """
+        Apply full map to f_in, placing result in f_out
+        """
+        f_layer = self.f_layer
+        self.run(f_in)
+        self.gather(f_layer, f_out)
         return f_out
 
     def increment_ls_system(self, mat, rhs, pair):
@@ -47,9 +61,8 @@ class phi(object):
         pair - a size 2 tuple containing input and output functions
         """
 
-        f_layer = self.scatter(pair[0])
-        for layer in range(self.layers):
-            f_layer = self.nonlocal_layer(f_layer, layer)
+        self.run(pair[0])
+        f_layer = self.f_layer
         for i in range(self.d_c):
             for j in range(self.d_c):
                 mat[i, j] += assemble(
@@ -68,7 +81,7 @@ class phi(object):
         self.b = b
         self.e = e
 
-    def nonlocal_layer(self, f_in, l):
+    def nonlocal_layer(self, f_in, f_out, l):
         """
         Apply one nonlocal layer to f_in [from Vv]
         return output in f_out [from Vv]
@@ -81,7 +94,7 @@ class phi(object):
 
         # Lg = sigma(Tg + b + sum_j <e_j.g, phi_j> * phi_j)
         
-        f_out = Function(self.Vv)
+        f_out.assign(0.)
 
         f_exp = []
         for i in range(self.d_c):
@@ -115,27 +128,25 @@ class phi(object):
         assert c.shape == (self.d_c,)
         self.c_gather = c
     
-    def gather(self, f_in):
+    def gather(self, f_in, f_out):
         """
         given f_in from VFS, 
         construct f_out = sum_i c_i f_in[i]
         where c_i are coefficients in self.c_gather
         """
         assert self.c_gather.all(), "c_gather is not set."
-        f_out = Function(self.V)
+        f_out.assign(0.)
         for i in range(self.d_c):
             f_out.assign(f_out
                          + Constant(self.c_gather[i])*f_in.sub(i))
-        return f_out
 
-    def scatter(self, f_in):
+    def scatter(self, f_in, f_out):
         """
         Scatter f_in out to a channel of width d_c
         returns: f_out, the result
         """
-        f_out = Function(self.Vv)
+        f_out.assign(0.)
         f_splat = []
         for i in range(self.d_c):
             f_splat.append(f_in)
         f_out.interpolate(as_vector(f_splat))
-        return f_out

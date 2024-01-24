@@ -25,7 +25,7 @@ tsolver = NonlinearVariationalSolver(prob,
                                          'ksp_type':'preonly',
                                          'pc_type':'lu'})
 
-nsamples = 1000
+nsamples = 10
 vtk = False
 
 if vtk:
