@@ -54,7 +54,7 @@ class phi(object):
             for j in range(self.d_c):
                 mat[i, j] += assemble(
                     inner(f_layer.sub(i), f_layer.sub(j))*dx)
-            rhs[i] += inner(f_layer.sub(i), pair[1])
+            rhs[i] += assemble(inner(f_layer.sub(i), pair[1])*dx)
 
     def set_basis(self, basis):
         self.basis = basis

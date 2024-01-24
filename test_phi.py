@@ -33,3 +33,12 @@ myphi.set_c_gather(c)
 
 f_in = Function(V).interpolate(exp(sin(2*pi*x)) + cos(2*pi*x)**3)
 f_out = myphi.apply(f_in)
+
+# testing the assembly to see if it executes
+# we'll just feed f_in and f_out back in which is nonsense
+# but enough to check code runs
+
+A = np.zeros((myphi.d_c, myphi.d_c))
+b = np.zeros((myphi.d_c,))
+
+myphi.increment_ls_system(A, b, (f_in, f_out))
