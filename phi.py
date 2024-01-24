@@ -35,11 +35,31 @@ class phi(object):
         f_out = self.gather(f_layer)
         return f_out
 
+    def increment_ls_system(self, mat, rhs, pair):
+        """
+        Add entries to an existing least squares matrix
+        and rhs
+        for obtaining c_gather coming from a pair (X, Y)
+        of inputs and outputs
+
+        mat - a (d_c, d_c) numpy array
+        rhs - a (d_c,) numpy array
+        pair - a size 2 tuple containing input and output functions
+        """
+
+        f_layer = self.scatter(pair[0])
+        for layer in range(self.layers):
+            f_layer = self.nonlocal_layer(f_layer, layer)
+        for i in range(self.d_c):
+            for j in range(self.d_c):
+                mat[i, j] += assemble(
+                    inner(f_layer.sub(i), f_layer.sub(j))*dx)
+            rhs[i] += inner(f_layer.sub(i), pair[1])
+
     def set_basis(self, basis):
         self.basis = basis
 
     def set_weights(self, T, b, e):
-        print(type(self))
         assert self.basis, "basis is not set."
         assert T.shape == (self.layers, self.d_c, self.d_c)
         assert b.shape == (self.layers, self.d_c)
