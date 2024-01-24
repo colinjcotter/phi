@@ -26,7 +26,7 @@ tsolver = NonlinearVariationalSolver(prob,
                                          'pc_type':'lu'})
 
 nsamples = 1000
-vtk = True
+vtk = False
 
 if vtk:
     pfile = File('first.pvd')

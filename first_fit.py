@@ -1,9 +1,11 @@
-# just checking the phi methods execute
+# an initial testing of the training
 from firedrake import *
 import numpy as np
 from phi import phi
 
-mesh = UnitIntervalMesh(50)
+with CheckpointFile("first.h5", 'r') as afile:
+    mesh = afile.load_mesh("mesh0")
+
 V = FunctionSpace(mesh, "CG", 1)
 myphi = phi(mesh, V, d_c=10, layers=5)
 x, = SpatialCoordinate(mesh)
@@ -25,20 +27,12 @@ b = np.random.randn(myphi.layers, myphi.d_c)
 e = np.random.randn(myphi.layers, myphi.d_c, len(myphi.basis))
 myphi.set_weights(T, b, e)
 
-# setting the c_gather [we should solve for this in general but here
-# we just randomise it to get numbers]
-
-c = np.random.randn(myphi.d_c)
-myphi.set_c_gather(c)
-
-f_in = Function(V).interpolate(exp(sin(2*pi*x)) + cos(2*pi*x)**3)
-f_out = myphi.apply(f_in)
-
-# testing the assembly to see if it executes
-# we'll just feed f_in and f_out back in which is nonsense
-# but enough to check code runs
+# assembling the a matrix from data
 
 A = np.zeros((myphi.d_c, myphi.d_c))
 b = np.zeros((myphi.d_c,))
-
-myphi.increment_ls_system(A, b, (f_in, f_out))
+with CheckpointFile("first.h5", 'r') as afile:
+    for i in range(1000):
+        f_in = afile.load_function(mesh, "input", idx=i)
+        f_out = afile.load_function(mesh, "output", idx=i)
+        myphi.increment_ls_system(A, b, (f_in, f_out))
