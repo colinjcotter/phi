@@ -32,7 +32,9 @@ myphi.set_weights(T, b, e)
 
 # assembling the a matrix from data
 gamma = 1.0e-2
+nsamples = 20
 A = np.fromfile("A.dat", sep=" ")
+A = A.reshape((myphi.d_c, myphi.d_c))
 rhs = np.fromfile("rhs.dat", sep=" ")
 
 c = np.linalg.solve(A + gamma/nsamples*np.eye(myphi.d_c),
@@ -56,7 +58,8 @@ a = (alpha**2 * du.dx(0) * v.dx(0) + du * v) * dx
 L = (ic / sqrt(area)) * v * dx
 solve(a == L, f_in, solver_parameters={'ksp_type': 'preonly',
                                        'pc_type': 'lu'})
-f_in.interpolate(Constant(1/a)*ln(1 + exp(Constant(a)*f_in)))
+a0 = 10
+f_in.interpolate(Constant(1/a0)*ln(1 + exp(Constant(a0)*f_in)))
 f_out = Function(V, name="out")
 myphi.apply(f_in, f_out)
 
