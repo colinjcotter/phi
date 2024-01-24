@@ -1,6 +1,7 @@
 from firedrake import *
 import numpy as np
 from firedrake.petsc import PETSc
+from firedrake.assemble import OneFormAssembler
 
 class phi(object):
     def __init__(self, mesh, V, d_c, layers):
@@ -25,9 +26,12 @@ class phi(object):
         self.e = None
         self.scale = 1.0
         self.f_tmp = Function(self.V)
+        self.f_tmp1 = Function(self.V)
         self.f_layer = Function(self.Vv)
         self.f_layer1 = Function(self.Vv)
-
+        v = TestFunction(V)
+        self.cof = Cofunction(V.dual())
+        self.cof_assembler = OneFormAssembler(v*self.f_tmp*dx, tensor=self.cof)
     def run(self, f_in):
         """
         Apply the map up to final layer to f_in, 
@@ -64,13 +68,16 @@ class phi(object):
         """
 
         self.f_tmp.assign(pair[0])
-        self.run(pair[0])
+        self.run(self.f_tmp)
         f_layer = self.f_layer
         for i in range(self.d_c):
-            for j in range(self.d_c):
-                mat[i, j] += assemble(
-                    inner(f_layer.sub(i), f_layer.sub(j))*dx)
-            rhs[i] += assemble(inner(f_layer.sub(i), pair[1])*dx)
+            self.f_tmp.assign(f_layer.sub(i))
+            self.cof_assembler.assemble()
+            for j in range(self.d_c):               
+                self.f_tmp1.assign(f_layer.sub(j))
+                mat[i, j] += assemble(self.cof(self.f_tmp1))
+            self.f_tmp1.assign(pair[1])
+            rhs[i] += assemble(self.cof(self.f_tmp1))
 
     def set_basis(self, basis):
         self.basis = basis
@@ -107,10 +114,13 @@ class phi(object):
                 f_out.sub(i).assign(f_out.sub(i) +
                                     Constant(self.T[l, i, j])*f_in.sub(j))
             # nonlocal part
-            for k, basis_fn in enumerate(self.basis):
-                self.f_tmp.assign(basis_fn)
+        for k, basis_fn in enumerate(self.basis):
+            self.f_tmp.assign(basis_fn)
+            self.cof_assembler.assemble()
+            for i in range(self.d_c):
                 for j in range(self.d_c):
-                    coeff = assemble(inner(f_in.sub(j), self.f_tmp)*dx)
+                    self.f_tmp1.assign(f_in.sub(j))
+                    coeff = assemble(self.cof(self.f_tmp1)) #  assemble(inner(self.f_tmp1, self.f_tmp)*dx)
                     f_out.sub(i).assign(f_out.sub(i) +
                                         Constant(coeff*
                                                  self.e[l, j, k])*self.f_tmp)
